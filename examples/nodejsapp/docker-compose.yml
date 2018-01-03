@@ -1,0 +1,15 @@
+version: '2'
+
+services:
+  nodejs_app:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    environment:
+      - VIRTUAL_NETWORK=nginx-proxy
+      - VIRTUAL_PORT=8000
+      - HEALTH_CHECKER=http
+networks:
+  default:
+    external:
+      name: nginx-proxy

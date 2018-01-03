@@ -1,0 +1,14 @@
+{
+  "name": "nodejsapp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Tom Wagner",
+  "dependencies": {
+    "express": "^4.15.3"
+  }
+}

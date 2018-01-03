@@ -1,0 +1,16 @@
+# https://github.com/wsargent/docker-cheat-sheet
+
+version: '2'
+
+services:
+  docker-doctor:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+
+networks:
+  default:
+    external:
+      name: nginx-proxy
