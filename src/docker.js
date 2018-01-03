@@ -1,5 +1,7 @@
-var fs = require('fs');
+import fs from 'fs';
 import Docker from 'dockerode';
+import * as R from 'ramda';
+
 var socket = process.env.DOCKER_SOCKET || '/var/run/docker.sock';
 var stats = fs.statSync(socket);
 import {
@@ -83,3 +85,33 @@ export const getContainerId = containerName =>
       .then(container => resolve(container.Id))
       .catch(err => reject(err));
   });
+
+export const stopAndRemoveContainers = containers =>
+  containers.map(container => {
+    if (container.State === 'exited') {
+      docker
+        .getContainer(container.Id)
+        .remove()
+        .catch(console.log);
+    } else {
+      docker
+        .getContainer(container.Id)
+        .stop()
+        .then(container => container.remove())
+        .catch(console.log);
+    }
+  });
+
+export const parseContainerName = name => {
+  const parsedName = name.match(/(.*[0-9]+)_(.*)_([0-9]*)/);
+  if (R.isNil(parsedName)) throw Error('ContainerName parse error');
+
+  return {
+    prefix: parsedName[1],
+    name: parsedName[2],
+    scale: parseInt(parsedName[3], 10)
+  };
+};
+
+export const getEnvironment = json =>
+  R.fromPairs(R.map(R.split('='))(R.pathOr([], ['Config', 'Env'], json)));

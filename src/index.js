@@ -1,47 +1,16 @@
 import {
   getFirst,
+  getEnvironment,
   docker,
   findContainers,
-  findContainerWithId
+  findContainerWithId,
+  parseContainerName,
+  stopAndRemoveContainers
 } from './docker';
 import * as R from 'ramda';
 import Dockerode from 'dockerode';
 import DockerEvents from 'docker-events';
 import checkers from './checkers/';
-
-const emitter = new DockerEvents({
-  docker
-});
-
-const stopAndRemoveContainers = containers =>
-  containers.map(container => {
-    if (container.State === 'exited') {
-      docker
-        .getContainer(container.Id)
-        .remove()
-        .catch(console.log);
-    } else {
-      docker
-        .getContainer(container.Id)
-        .stop()
-        .then(container => container.remove())
-        .catch(console.log);
-    }
-  });
-
-const parseContainerName = name => {
-  const parsedName = name.match(/(.*[0-9]+)_(.*)_([0-9]*)/);
-  if (R.isNil(parsedName)) throw Error('ContainerName parse error');
-
-  return {
-    prefix: parsedName[1],
-    name: parsedName[2],
-    scale: parseInt(parsedName[3], 10)
-  };
-};
-
-const getEnvironment = json =>
-  R.fromPairs(R.map(R.split('='))(R.pathOr([], ['Config', 'Env'], json)));
 
 const HEALTH_MAX_RETRY = 'HEALTH_MAX_RETRY';
 const HEALTH_TIMEOUT = 'HEALTH_TIMEOUT';
@@ -49,6 +18,10 @@ const HEALTH_CHECKER = 'HEALTH_CHECKER';
 const VIRTUAL_HOST = 'VIRTUAL_HOST';
 const VIRTUAL_PORT = 'VIRTUAL_PORT';
 const TIME_CORRECTION = 5; // five second correction
+
+const emitter = new DockerEvents({
+  docker
+});
 
 export const getContainerNetwork = json => {
   const networks = Object.keys(json.NetworkSettings.Networks);
@@ -89,7 +62,7 @@ emitter.on('start', json => {
         }
       });
   } catch (err) {
-    console.log('err', err);
+    console.log('err', err.message);
   }
 });
 
