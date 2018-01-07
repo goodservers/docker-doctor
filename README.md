@@ -4,11 +4,16 @@ The docker container checker waits until the new container is fully prepared and
 ## Example
 You have some application defined in docker (see `examples/nodejsapp`). When your CI runs the deployment phase it starts the new container and removes old one. But it takes some time to boot up application to healthy state. And if you have only one container it causes downtime. So you can setup the checker which waits until the new container is fully prepared and then removes the old one.
 
-## Setup
+## Setup on server
 ```
 docker-compose up
 ```
 or see the example of usage with nginx, nginx-proxy, letsencrypt as a server [docker-gateway](https://github.com/goodservers/docker-gateway)
+
+## Setup for example app `examples/nodejsapp`
+```
+docker-compose -f docker-compose.yml --project-name=$(date +%s) up --scale nodejs_app=1 -d
+```
 
 ## Environment props
 | env | values | default | meaning |

@@ -89,21 +89,19 @@ export const getContainerId = containerName =>
 export const stopAndRemoveContainers = containers =>
   containers.map(container => {
     if (container.State === 'exited') {
-      docker
+      return docker
         .getContainer(container.Id)
         .remove()
-        .catch(console.log);
     } else {
-      docker
+      return docker
         .getContainer(container.Id)
         .stop()
         .then(container => container.remove())
-        .catch(console.log);
     }
   });
 
 export const parseContainerName = name => {
-  const parsedName = name.match(/(.*[0-9]+)_(.*)_([0-9]*)/);
+  const parsedName = name.match(/(.*[0-9]+)_(.*)_([0-9]+)/);
   if (R.isNil(parsedName)) throw Error('ContainerName parse error');
 
   return {
@@ -113,5 +111,18 @@ export const parseContainerName = name => {
   };
 };
 
-export const getEnvironment = json =>
+export const parseEnvironment = json =>
   R.fromPairs(R.map(R.split('='))(R.pathOr([], ['Config', 'Env'], json)));
+
+export const parseContainerNetwork = json => {
+  const networks = Object.keys(json.NetworkSettings.Networks);
+  return json.NetworkSettings.Networks[getFirst(networks)];
+};
+
+export const renameContainers = containers =>
+  containers.map(container => {
+    const parsedName = parseContainerName(getFirst(container.Names))
+    return docker
+      .getContainer(container.Id)
+      .rename({ name: `${parsedName.name}_${parsedName.scale}`})
+  });

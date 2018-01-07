@@ -1,10 +1,11 @@
 import {
-  getFirst,
-  getEnvironment,
   docker,
   findContainers,
   findContainerWithId,
   parseContainerName,
+  parseContainerNetwork,
+  parseEnvironment,
+  renameContainers,
   stopAndRemoveContainers
 } from './docker';
 import * as R from 'ramda';
@@ -23,11 +24,6 @@ const emitter = new DockerEvents({
   docker
 });
 
-export const getContainerNetwork = json => {
-  const networks = Object.keys(json.NetworkSettings.Networks);
-  return json.NetworkSettings.Networks[getFirst(networks)];
-};
-
 emitter.on('start', json => {
   try {
     const { name } = parseContainerName(
@@ -39,8 +35,8 @@ emitter.on('start', json => {
       .getContainer(json.id)
       .inspect()
       .then(json => {
-        const env = getEnvironment(json);
-        const network = getContainerNetwork(json);
+        const env = parseEnvironment(json);
+        const network = parseContainerNetwork(json);
 
         // health checks only containers with specified HEALTH_CHECKER property
         if (!R.isEmpty(env[HEALTH_CHECKER])) {
@@ -56,8 +52,15 @@ emitter.on('start', json => {
             const containersToStop = containers.filter(
               container => container.Created < startedTime
             );
-            // console.log('Stopping', containersToStop);
-            stopAndRemoveContainers(containersToStop);
+
+            await Promise.all(stopAndRemoveContainers(containersToStop));
+            // rename started containers to name without timestamp
+            const containersToRename = containers.filter(
+              container => container.Created >= startedTime
+            );
+
+            await Promise.all(renameContainers(containersToRename));
+
           });
         }
       });
