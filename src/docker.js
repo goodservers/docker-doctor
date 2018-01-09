@@ -36,7 +36,7 @@ export const findContainers = containerName =>
           Names: compose(
             not,
             isEmpty,
-            filter(compose(not, isEmpty, match(regexp))),
+            filter(compose(not, isEmpty, match(regexp)))
           )
         })
       )(response);
@@ -86,17 +86,37 @@ export const getContainerId = containerName =>
       .catch(err => reject(err));
   });
 
+/**
+ * Gets container's docker compose neighbours
+ * @param  {string} containerId
+ * @return {Promise<[]>}
+ */
+export const getContainerNeighbours = async containerId => {
+  const inspect = await docker.getContainer(containerId).inspect();
+  const containerDockerComposeProject = R.pathOr(
+    '',
+    ['Config', 'Labels', 'com.docker.compose.project'],
+    inspect
+  );
+
+  return !R.isNil(containerDockerComposeProject)
+    ? docker.listContainers({
+        filters: {
+          label: [`com.docker.compose.project=${containerDockerComposeProject}`]
+        }
+      })
+    : new Promise(() => []);
+};
+
 export const stopAndRemoveContainers = containers =>
   containers.map(container => {
     if (container.State === 'exited') {
-      return docker
-        .getContainer(container.Id)
-        .remove()
+      return docker.getContainer(container.Id).remove();
     } else {
       return docker
         .getContainer(container.Id)
         .stop()
-        .then(container => container.remove())
+        .then(container => container.remove());
     }
   });
 
@@ -121,8 +141,8 @@ export const parseContainerNetwork = json => {
 
 export const renameContainers = containers =>
   containers.map(container => {
-    const parsedName = parseContainerName(getFirst(container.Names))
+    const parsedName = parseContainerName(getFirst(container.Names));
     return docker
       .getContainer(container.Id)
-      .rename({ name: `${parsedName.name}_${parsedName.scale}`})
+      .rename({ name: `${parsedName.name}_${parsedName.scale}` });
   });

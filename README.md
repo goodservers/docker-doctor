@@ -18,11 +18,12 @@ docker-compose -f docker-compose.yml --project-name=$(date +%s) up --scale nodej
 ## Environment props
 | env | values | default | meaning |
 |-----|--------|---------|---------|
-| HEALTH_CHECKER | http, https | - | active script used to check health  |
-| HEALTH_MAX_RETRY | number | 30 | maximum number of attempts to check health |
-| HEALTH_TIMEOUT | number | 1000 | number of ms to check in one attempt |
+| VIRTUAL_PORT | number | - | application listening port (same name as for nginx-proxy) |
+| HEALTH_CHECKER | http, https | - | active script used to check health |
+| HEALTH_MAX_RETRY | number | 30 | (optional) maximum number of attempts to check health |
+| HEALTH_TIMEOUT | number | 1000 | (optional) number of ms to check in one attempt |
 
 ## Requirements
 * [Good VPS or dedicated server](https://goodservers.io)
-* Docker, docker compose
-* [nginx-proxy](https://github.com/jwilder/nginx-proxy) as a gateway for your deployed containers - they are automatically proxied - so your service is balanced between two containers.
+* Installed docker and docker-compose
+* [nginx-proxy](https://github.com/goodservers/docker-gateway) as a gateway for your deployed containers - they are automatically proxied - so your service is balanced between two containers.

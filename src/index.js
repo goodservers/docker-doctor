@@ -2,6 +2,7 @@ import {
   docker,
   findContainers,
   findContainerWithId,
+  getContainerNeighbours,
   parseContainerName,
   parseContainerNetwork,
   parseEnvironment,
@@ -39,7 +40,7 @@ emitter.on('start', json => {
         const network = parseContainerNetwork(json);
 
         // health checks only containers with specified HEALTH_CHECKER property
-        if (!R.isEmpty(env[HEALTH_CHECKER])) {
+        if (!R.isNil(env[HEALTH_CHECKER])) {
           console.log('Health check:', name, env[HEALTH_CHECKER], startedTime);
           return checkers[env[HEALTH_CHECKER]]({
             ip: network.IPAddress,
@@ -53,14 +54,19 @@ emitter.on('start', json => {
               container => container.Created < startedTime
             );
 
-            await Promise.all(stopAndRemoveContainers(containersToStop));
+            // Find sibling containers (started from docker-compose)
+            const allContainersToStop = R.flatten(await Promise.all(
+              containersToStop.map(container => getContainerNeighbours(container.Id))
+            ));
+
+            await Promise.all(stopAndRemoveContainers(allContainersToStop));
+
             // rename started containers to name without timestamp
             const containersToRename = containers.filter(
               container => container.Created >= startedTime
             );
 
             await Promise.all(renameContainers(containersToRename));
-
           });
         }
       });

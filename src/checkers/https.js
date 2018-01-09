@@ -1,13 +1,13 @@
 import request from 'request';
 
-export const httpsChecker = ({ ip, port, maxRetry = 30, timeout = 1000 }) => {
+export const httpsChecker = ({ ip, port, maxRetry = 30, timeout = 1000, path = '/', responseStatus = 200 }) => {
   let count = 0;
 
   return new Promise((resolve, reject) => {
     const httpRetry = (maxRetry, timeout) => {
-      const url = `https://${ip}:${port}`;
+      const url = `https://${ip}:${port}${path}`;
       request(url, { timeout: 5000 }, (error, response, body) => {
-        if (response && response.statusCode === 200) {
+        if (response && response.statusCode === responseStatus) {
           console.log(
             `OMG, ${url} is alive!, status code: ${response.statusCode}`
           );
