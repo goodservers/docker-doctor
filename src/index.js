@@ -50,20 +50,24 @@ emitter.on('start', json => {
           }).then(async done => {
             const containers = await findContainers(name);
             // get old containers by time < startedTime and stop them
-            const containersToStop = containers.filter(
-              container => container.Created < startedTime
+            // Find sibling containers (started from docker-compose)
+            const containersToStop = R.flatten(
+              await Promise.all(
+                containers
+                  .filter(container => container.Created < startedTime)
+                  .map(container => getContainerNeighbours(container.Id))
+              )
             );
 
-            // Find sibling containers (started from docker-compose)
-            const allContainersToStop = R.flatten(await Promise.all(
-              containersToStop.map(container => getContainerNeighbours(container.Id))
-            ));
+            await Promise.all(stopAndRemoveContainers(containersToStop));
 
-            await Promise.all(stopAndRemoveContainers(allContainersToStop));
-
-            // rename started containers to name without timestamp
-            const containersToRename = containers.filter(
-              container => container.Created >= startedTime
+            // Find sibling containers (started from docker-compose) to rename
+            const containersToRename = R.flatten(
+              await Promise.all(
+                containers
+                  .filter(container => container.Created >= startedTime)
+                  .map(container => getContainerNeighbours(container.Id))
+              )
             );
 
             await Promise.all(renameContainers(containersToRename));
