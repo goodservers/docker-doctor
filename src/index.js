@@ -17,7 +17,6 @@ import checkers from './checkers/';
 const HEALTH_MAX_RETRY = 'HEALTH_MAX_RETRY';
 const HEALTH_TIMEOUT = 'HEALTH_TIMEOUT';
 const HEALTH_CHECKER = 'HEALTH_CHECKER';
-const VIRTUAL_HOST = 'VIRTUAL_HOST';
 const VIRTUAL_PORT = 'VIRTUAL_PORT';
 const TIME_CORRECTION = 5; // five second correction
 

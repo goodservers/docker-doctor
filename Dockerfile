@@ -1,5 +1,5 @@
 FROM mhart/alpine-node:latest
-MAINTAINER Tom Wagner <tomas.wagner@gmail.com>
+LABEL maintainer="Tom Wagner <tomas.wagner@gmail.com>"
 
 # create workdir
 RUN mkdir -p /app
