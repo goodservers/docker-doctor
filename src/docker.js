@@ -29,7 +29,7 @@ export const docker = new Docker({ socketPath: socket });
 
 export const findContainers = containerName =>
   new Promise((resolve, reject) => {
-    const regexp = new RegExp(`^(.*_){0,1}${containerName}_[0-9]+$`, 'g');
+    const regexp = new RegExp(`^\/(.*_){0,1}${containerName}_[0-9]+$`, 'g');
     docker.listContainers({ all: true }).then(response => {
       const found = filter(
         where({
