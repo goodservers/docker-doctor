@@ -7,10 +7,13 @@ RUN mkdir -p /app
 # set workdir
 WORKDIR /app
 
-# Copy the code
-ADD . .
-
+# install dependecies
+COPY package.json .
+COPY yarn.lock .
 RUN yarn install
+
+# copy app code
+COPY . .
 
 # entrypoint
 ENTRYPOINT yarn start
