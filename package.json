@@ -1,6 +1,6 @@
 {
   "name": "docker-doctor",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Health checker for your docker containers on server. Zero downtime.",
   "main": "src/index.js",
   "license": "MIT",
@@ -12,12 +12,12 @@
   "author": "Tom Wagner",
   "dependencies": {
     "docker-events": "^0.0.2",
-    "dockerode": "^2.5.0",
+    "dockerode": "^2.5.5",
     "ramda": "^0.25.0",
-    "request": "^2.83.0"
+    "request": "^2.87.0"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
-    "babel-preset-env": "^1.6.1"
+    "babel-preset-env": "^1.7.0"
   }
 }

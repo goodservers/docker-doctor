@@ -1,4 +1,4 @@
-FROM mhart/alpine-node:latest
+FROM mhart/alpine-node:10
 LABEL maintainer="Tom Wagner <tomas.wagner@gmail.com>"
 
 # create workdir
