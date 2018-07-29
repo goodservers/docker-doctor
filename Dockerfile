@@ -1,4 +1,4 @@
-FROM mhart/alpine-node:10
+FROM mhart/alpine-node:10.0.0 AS builder
 LABEL maintainer="Tom Wagner <tomas.wagner@gmail.com>"
 
 # create workdir
@@ -7,13 +7,29 @@ RUN mkdir -p /app
 # set workdir
 WORKDIR /app
 
-# install dependecies
-COPY package.json .
-COPY yarn.lock .
+# cache web and common dir dependencies
+COPY yarn.lock package.json ./
 RUN yarn install
 
 # copy app code
 COPY . .
 
+ENV NODE_ENV=production
+RUN yarn build
+RUN yarn pkg
+
 # entrypoint
 ENTRYPOINT yarn start
+
+
+# And then copy pkg binary from that stage to the smaller base image
+FROM alpine:3.7
+RUN apk update && \
+  apk add --no-cache libstdc++ libgcc ca-certificates && \
+  rm -rf /var/cache/apk/*
+WORKDIR /app
+
+COPY --from=builder /app/pkg .
+ENV NODE_ENV=production
+
+ENTRYPOINT ./docker-doctor
