@@ -28,11 +28,16 @@ const emitter = new DockerEvents({
   docker
 });
 
+const getStartTime = container =>
+  dateToTimestamp(R.path(['State', 'StartedAt'], container));
+
 emitter.on('start', async info => {
   try {
-    const { scale: containerInstance, name: containerName, prefix: containerPrefix } = parseContainerName(
-      R.pathOr('', ['Actor', 'Attributes', 'name'], info)
-    );
+    const {
+      scale: containerInstance,
+      name: containerName,
+      prefix: containerPrefix
+    } = parseContainerName(R.path(['Actor', 'Attributes', 'name'], info));
 
     const currentContainer = await docker.getContainer(info.id).inspect();
     const env = parseEnvironment(currentContainer);
@@ -40,9 +45,16 @@ emitter.on('start', async info => {
     const startedTime = dateToTimestamp(currentContainer.State.StartedAt);
 
     // health checks only containers with specified HEALTH_CHECKER property
-    if (R.isNil(env[HEALTH_CHECKER])) return;
+    // and nly first instance take care about stopping old containers
+    if (R.isNil(env[HEALTH_CHECKER]) || parseInt(containerInstance, 10) !== 1) return;
 
-    console.log('Health check:', containerName, env[HEALTH_CHECKER], startedTime);
+    console.log(
+      'Health check:',
+      containerName,
+      env[HEALTH_CHECKER],
+      startedTime
+    );
+
     const done = await checkers[env[HEALTH_CHECKER]]({
       ip: network.IPAddress,
       port: env[VIRTUAL_PORT],
@@ -57,59 +69,38 @@ emitter.on('start', async info => {
       )
     );
 
-    // Only first instance take care about stopping old containers
-    if (containerInstance === 1) {
-      const containersToStop = R.uniqBy((container) => container.Id, R.flatten(
+    const containersToStop = R.uniqBy(
+      container => container.Id,
+      R.flatten(
         await Promise.all(
           containers
             .map(container => {
-              const containerStarted = dateToTimestamp(
-                R.pathOr(currentContainer.State.StartedAt, ['State', 'StartedAt'], container)
-              );
-              console.log(containerStarted, startedTime);
+              console.log('container #', containerInstance, getStartTime(container), startedTime);
               return container;
             })
-            .filter(
-              container =>
-                dateToTimestamp(
-                  R.pathOr(
-                    currentContainer.State.StartedAt,
-                    ['State', 'StartedAt'],
-                    container
-                  )
-                ) < startedTime
-            )
+            .filter(container => getStartTime(container) < startedTime)
             .map(container => getContainerNeighbours(container.Id))
         )
-      ))
+      )
+    )
       // dont stop scaled containers
       .filter(container => !container.Image.includes(containerPrefix));
-      containersToStop.map(container => console.log(container.Names));
-      console.log('containersToStop', containersToStop.length);
-      await Promise.all(stopAndRemoveContainers(containersToStop));
-    }
+    console.log('container #', containerInstance, 'toStop', containersToStop.length);
+    containersToStop.map(container => console.log('container #', containerInstance, container.Names));
+    await Promise.all(stopAndRemoveContainers(containersToStop));
 
     // Find sibling containers (started from docker-compose) to rename
     const containersToRename = R.flatten(
       await Promise.all(
         containers
-          .filter(
-            container =>
-            dateToTimestamp(
-              R.pathOr(
-                currentContainer.State.StartedAt,
-                ['State', 'StartedAt'],
-                container
-              )
-            ) >= startedTime
-          )
+          .filter(container => getStartTime(container) >= startedTime)
           .map(container => getContainerNeighbours(container.Id))
       )
     );
 
     await Promise.all(renameContainers(containersToRename));
-  } catch (err) {
-    console.log('err', err.message);
+  } catch (error) {
+    console.log(error.message);
   }
 });
 
