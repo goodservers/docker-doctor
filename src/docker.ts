@@ -1,25 +1,22 @@
-import fs from 'fs';
-import Docker from 'dockerode';
+import * as Docker from 'dockerode';
+import * as fs from 'fs';
 import * as R from 'ramda';
+import {
+  compose,
+  equals,
+  filter,
+  isEmpty,
+  match,
+  not,
+  nth,
+  where
+} from 'ramda';
+import { Env } from './types';
 
 var socket = process.env.DOCKER_SOCKET || '/var/run/docker.sock';
 var stats = fs.statSync(socket);
-import {
-  compose,
-  isEmpty,
-  not,
-  where,
-  filter,
-  contains,
-  prop,
-  tap,
-  match,
-  equals,
-  nth,
-  is
-} from 'ramda';
 
-export const getFirst = list => nth(0, list);
+export const getFirst = (list: any): any => nth(0, list);
 
 if (!stats.isSocket()) {
   throw new Error('Are you sure the docker is running?');
@@ -27,7 +24,7 @@ if (!stats.isSocket()) {
 
 export const docker = new Docker({ socketPath: socket });
 
-export const findContainers = containerName =>
+export const findContainers = (containerName: string): Promise<any> =>
   new Promise((resolve, reject) => {
     const regexp = new RegExp(`^\/(.*_){0,1}${containerName}_[0-9]+$`, 'g');
     docker.listContainers({ all: true }).then(response => {
@@ -36,7 +33,13 @@ export const findContainers = containerName =>
           Names: compose(
             not,
             isEmpty,
-            filter(compose(not, isEmpty, match(regexp)))
+            filter(
+              compose(
+                not,
+                isEmpty,
+                match(regexp)
+              )
+            )
           )
         })
       )(response);
@@ -45,7 +48,7 @@ export const findContainers = containerName =>
     });
   });
 
-export const findContainerWithId = containerId =>
+export const findContainerWithId = (containerId: string) =>
   new Promise((resolve, reject) => {
     docker.listContainers({ all: true }).then(response => {
       const found = filter(where({ Id: equals(containerId) }))(response);
@@ -56,42 +59,39 @@ export const findContainerWithId = containerId =>
     });
   });
 
-export const getContainerNetwork = containerId =>
+export const getContainerNetwork = (containerId: string) =>
   new Promise((resolve, reject) => {
     findContainerWithId(containerId)
-      .then(container => {
+      .then((container: any) => {
         const networks = Object.keys(container.NetworkSettings.Networks);
         networks
           ? resolve(container.NetworkSettings.Networks[getFirst(networks)])
-          : reject(`No network found in ${containerName}`);
+          : reject(`No network found in.`);
       })
       .catch(err => reject(err));
   });
 
-export const getContainerPort = containerId =>
+export const getContainerPort = (containerId: string) =>
   new Promise((resolve, reject) => {
     findContainerWithId(containerId)
-      .then(container => {
+      .then((container: any) => {
         container.Ports
           ? resolve(getFirst(container.Ports).PrivatePort)
-          : reject(`No ports found in ${containerName}`);
+          : reject(`No ports found in.`);
       })
       .catch(err => reject(err));
   });
 
-export const getContainerId = containerName =>
+export const getContainerId = (containerName: string) =>
   new Promise((resolve, reject) => {
-    findContainer(containerName)
+    findContainers(containerName)
       .then(container => resolve(container.Id))
       .catch(err => reject(err));
   });
 
-/**
- * Gets container's docker compose neighbours
- * @param  {string} containerId
- * @return {Promise<[]>}
- */
-export const getContainerNeighbours = async containerId => {
+export const getContainerNeighbours = async (
+  containerId: string
+): Promise<any[]> => {
   const inspect = await docker.getContainer(containerId).inspect();
   const containerDockerComposeProject = R.pathOr(
     '',
@@ -120,7 +120,7 @@ export const stopAndRemoveContainers = containers =>
     }
   });
 
-export const parseContainerName = name => {
+export const parseContainerName = (name: string): any => {
   const parsedName = name.match(/(.*[0-9]+)_(.*)_([0-9]+)/);
   if (R.isNil(parsedName)) throw Error('ContainerName parse error');
 
@@ -131,8 +131,8 @@ export const parseContainerName = name => {
   };
 };
 
-export const parseEnvironment = json =>
-  R.fromPairs(R.map(R.split('='))(R.pathOr([], ['Config', 'Env'], json)));
+export const parseEnvironment = (json: any): Env =>
+  R.fromPairs(R.map(R.split('='))(R.path(['Config', 'Env'], json)) as any);
 
 export const parseContainerNetwork = json => {
   const networks = Object.keys(json.NetworkSettings.Networks);
