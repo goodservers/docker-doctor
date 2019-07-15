@@ -2,4 +2,5 @@
 node_modules
 /examples/nodejsapp/settings
 /examples/nodejsapp/app
-/dist
+dist
+pkg

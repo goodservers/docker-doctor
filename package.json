@@ -1,11 +1,11 @@
 {
   "name": "docker-doctor",
-  "version": "0.3.0",
+  "version": "0.4.0-beta.2",
   "description": "Health checker for your docker containers on server. Zero downtime.",
   "license": "MIT",
   "scripts": {
     "start": "NODE_ENV=production node dist/index.js",
-    "build": "export NODE_ENV=production && rm -rf ./lib && webpack --config webpack.config.js",
+    "build": "tsc --outDir dist src/index.ts",
     "dev": "nodemon --exec 'babel-node' src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "pkg": "pkg . --targets node10-alpine-x64 --out-path pkg"
@@ -16,19 +16,14 @@
   "author": "Tom Wagner",
   "dependencies": {
     "docker-events": "^0.0.2",
-    "dockerode": "^2.5.5",
-    "ramda": "^0.25.0",
-    "request": "^2.87.0"
+    "dockerode": "^2.5.8",
+    "ramda": "^0.26.1",
+    "request": "^2.88.0"
   },
   "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-loader": "^7.1.5",
-    "babel-plugin-transform-async-to-generator": "^6.24.1",
-    "babel-preset-env": "^1.7.0",
-    "pkg": "^4.3.3",
-    "shebang-loader": "^0.0.1",
-    "webpack": "3.6.0",
-    "webpack-cli": "^3.0.8",
-    "webpack-node-externals": "^1.7.2"
+    "@types/dockerode": "^2.5.20",
+    "@types/ramda": "^0.26.15",
+    "pkg": "^4.4.0",
+    "typescript": "^3.5.3"
   }
 }
