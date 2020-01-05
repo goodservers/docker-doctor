@@ -1,61 +1,57 @@
 import * as Docker from 'dockerode';
 import * as fs from 'fs';
 import * as R from 'ramda';
-import {
-  compose,
-  equals,
-  filter,
-  isEmpty,
-  match,
-  not,
-  nth,
-  where
-} from 'ramda';
-import { Env } from './types';
+import { Env, ParsedContainerName } from './types';
 
-var socket = process.env.DOCKER_SOCKET || '/var/run/docker.sock';
-var stats = fs.statSync(socket);
+var socketPath = process.env.DOCKER_SOCKET || '/var/run/docker.sock';
 
-export const getFirst = (list: any): any => nth(0, list);
-
-if (!stats.isSocket()) {
+if (!fs.statSync(socketPath).isSocket()) {
   throw new Error('Are you sure the docker is running?');
 }
+export const docker = new Docker({ socketPath });
 
-export const docker = new Docker({ socketPath: socket });
+export const getFirst = <T>(list: T[]): T => R.nth(0, list);
 
-export const findContainers = (containerName: string): Promise<any> =>
+export const findContainers = (
+  containerName: string
+): Promise<Docker.ContainerInfo[]> =>
   new Promise((resolve, reject) => {
     const regexp = new RegExp(`^\/(.*_){0,1}${containerName}_[0-9]+$`, 'g');
     docker.listContainers({ all: true }).then(response => {
-      const found = filter(
-        where({
-          Names: compose(
-            not,
-            isEmpty,
-            filter(
-              compose(
-                not,
-                isEmpty,
-                match(regexp)
+      const found = R.filter(
+        R.where({
+          Names: R.compose(
+            R.not,
+            R.isEmpty,
+            R.filter(
+              R.compose(
+                R.not,
+                R.isEmpty,
+                R.match(regexp)
               )
             )
           )
         })
-      )(response);
+      )(response) as Docker.ContainerInfo[];
 
-      found ? resolve(found) : reject(`Container "${containerName}" not found`);
+      resolve(found);
     });
   });
 
-export const findContainerWithId = (containerId: string) =>
+export const findContainerWithId = (
+  containerId: string
+): Promise<Docker.ContainerInfo> =>
   new Promise((resolve, reject) => {
-    docker.listContainers({ all: true }).then(response => {
-      const found = filter(where({ Id: equals(containerId) }))(response);
+    return docker.listContainers({ all: true }).then(response => {
+      const found = R.filter(R.where({ Id: R.equals(containerId) }))(
+        response
+      ) as Docker.ContainerInfo[];
 
-      found
-        ? resolve(getFirst(found))
-        : reject(`Container "${containerId}" not found`);
+      if (!found.length) {
+        reject(`Container "${containerId}" not found`);
+      }
+
+      resolve(getFirst(found));
     });
   });
 
@@ -71,30 +67,27 @@ export const getContainerNetwork = (containerId: string) =>
       .catch(err => reject(err));
   });
 
-export const getContainerPort = (containerId: string) =>
+export const getContainerPort = (containerId: string): Promise<number> =>
   new Promise((resolve, reject) => {
-    findContainerWithId(containerId)
-      .then((container: any) => {
-        container.Ports
-          ? resolve(getFirst(container.Ports).PrivatePort)
-          : reject(`No ports found in.`);
-      })
-      .catch(err => reject(err));
+    findContainerWithId(containerId).then(container => {
+      container.Ports
+        ? resolve(getFirst(container.Ports).PrivatePort)
+        : reject(`No ports found in.`);
+    });
   });
 
-export const getContainerId = (containerName: string) =>
+export const getContainerId = (containerName: string): Promise<string> =>
   new Promise((resolve, reject) => {
     findContainers(containerName)
-      .then(container => resolve(container.Id))
+      .then(container => resolve(getFirst(container).Id))
       .catch(err => reject(err));
   });
 
 export const getContainerNeighbours = async (
   containerId: string
-): Promise<any[]> => {
+): Promise<Docker.ContainerInfo[]> => {
   const inspect = await docker.getContainer(containerId).inspect();
-  const containerDockerComposeProject = R.pathOr(
-    '',
+  const containerDockerComposeProject = R.path(
     ['Config', 'Labels', 'com.docker.compose.project'],
     inspect
   );
@@ -108,8 +101,8 @@ export const getContainerNeighbours = async (
     : new Promise(() => []);
 };
 
-export const stopAndRemoveContainers = containers =>
-  containers.map(container => {
+export const stopAndRemoveContainers = (containers: Docker.ContainerInfo[]) =>
+  containers.map((container: Docker.ContainerInfo) => {
     if (container.State === 'exited') {
       return docker.getContainer(container.Id).remove();
     } else {
@@ -120,7 +113,7 @@ export const stopAndRemoveContainers = containers =>
     }
   });
 
-export const parseContainerName = (name: string): any => {
+export const parseContainerName = (name: string): ParsedContainerName => {
   const parsedName = name.match(/(.*[0-9]+)_(.*)_([0-9]+)/);
   if (R.isNil(parsedName)) throw Error('ContainerName parse error');
 
@@ -131,15 +124,21 @@ export const parseContainerName = (name: string): any => {
   };
 };
 
-export const parseEnvironment = (json: any): Env =>
-  R.fromPairs(R.map(R.split('='))(R.path(['Config', 'Env'], json)) as any);
+export const parseEnvironment = (
+  containers: Docker.ContainerInspectInfo
+): Env =>
+  R.fromPairs(R.map(R.split('='))(
+    R.path(['Config', 'Env'], containers)
+  ) as any);
 
-export const parseContainerNetwork = json => {
-  const networks = Object.keys(json.NetworkSettings.Networks);
-  return json.NetworkSettings.Networks[getFirst(networks)];
+export const parseContainerNetwork = (
+  containers: Docker.ContainerInspectInfo
+) => {
+  const networks = Object.keys(containers.NetworkSettings.Networks);
+  return containers.NetworkSettings.Networks[getFirst(networks)];
 };
 
-export const renameContainers = containers =>
+export const renameContainers = (containers: Docker.ContainerInfo[]) =>
   containers.map(container => {
     const parsedName = parseContainerName(getFirst(container.Names));
     return docker

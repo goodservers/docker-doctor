@@ -1,16 +1,8 @@
 import * as DockerEvents from 'docker-events';
+import * as Docker from 'dockerode';
 import * as R from 'ramda';
 import checkers from './checkers/';
-import {
-  docker,
-  findContainers,
-  getContainerNeighbours,
-  parseContainerName,
-  parseContainerNetwork,
-  parseEnvironment,
-  renameContainers,
-  stopAndRemoveContainers
-} from './docker';
+import { docker, findContainers, getContainerNeighbours, parseContainerName, parseContainerNetwork, parseEnvironment, renameContainers, stopAndRemoveContainers } from './docker';
 
 const HEALTH_MAX_RETRY = 'HEALTH_MAX_RETRY';
 const HEALTH_TIMEOUT = 'HEALTH_TIMEOUT';
@@ -26,7 +18,7 @@ const emitter = new DockerEvents({
   docker
 });
 
-const getStartTime = container =>
+const getStartTime = (container: Docker.ContainerInspectInfo): number =>
   dateToTimestamp(R.path(['State', 'StartedAt'], container));
 
 emitter.on('start', async info => {
@@ -72,7 +64,7 @@ emitter.on('start', async info => {
       R.flatten(
         await Promise.all(
           containers
-            .map((container: any) => {
+            .map(container => {
               console.log(
                 'container #',
                 containerInstance,
@@ -104,7 +96,7 @@ emitter.on('start', async info => {
       await Promise.all(
         containers
           .filter(container => getStartTime(container) >= startedTime)
-          .map((container: any) => getContainerNeighbours(container.Id))
+          .map(container => getContainerNeighbours(container.Id))
       )
     );
 

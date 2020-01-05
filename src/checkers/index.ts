@@ -1,8 +1,7 @@
-import { httpChecker } from './http';
-import { httpsChecker } from './https';
+import checker from './checker';
 
 const checkers = [];
-checkers['http'] = httpChecker;
-checkers['https'] = httpsChecker;
+checkers['http'] = checker('http');
+checkers['https'] = checker('https');
 
 export default checkers;

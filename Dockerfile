@@ -18,9 +18,6 @@ ENV NODE_ENV=production
 RUN yarn build
 RUN yarn pkg
 
-# # entrypoint
-# ENTRYPOINT yarn start
-
 
 # And then copy pkg binary from that stage to the smaller base image
 FROM alpine:3.10
