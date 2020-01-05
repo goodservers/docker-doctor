@@ -1,4 +1,4 @@
-FROM mhart/alpine-node:10.0.0 AS builder
+FROM mhart/alpine-node:10.16.0 AS builder
 LABEL maintainer="Tom Wagner <tomas.wagner@gmail.com>"
 
 # create workdir
@@ -18,12 +18,9 @@ ENV NODE_ENV=production
 RUN yarn build
 RUN yarn pkg
 
-# entrypoint
-ENTRYPOINT yarn start
-
 
 # And then copy pkg binary from that stage to the smaller base image
-FROM alpine:3.7
+FROM alpine:3.10
 RUN apk update && \
   apk add --no-cache libstdc++ libgcc ca-certificates && \
   rm -rf /var/cache/apk/*

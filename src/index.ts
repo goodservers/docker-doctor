@@ -1,18 +1,8 @@
-import {
-  docker,
-  findContainers,
-  findContainerWithId,
-  getContainerNeighbours,
-  parseContainerName,
-  parseContainerNetwork,
-  parseEnvironment,
-  renameContainers,
-  stopAndRemoveContainers
-} from './docker';
+import * as DockerEvents from 'docker-events';
+import * as Docker from 'dockerode';
 import * as R from 'ramda';
-import Dockerode from 'dockerode';
-import DockerEvents from 'docker-events';
 import checkers from './checkers/';
+import { docker, findContainers, getContainerNeighbours, parseContainerName, parseContainerNetwork, parseEnvironment, renameContainers, stopAndRemoveContainers } from './docker';
 
 const HEALTH_MAX_RETRY = 'HEALTH_MAX_RETRY';
 const HEALTH_TIMEOUT = 'HEALTH_TIMEOUT';
@@ -21,14 +11,14 @@ const VIRTUAL_PORT = 'VIRTUAL_PORT';
 
 const dateToTimestamp = date => {
   const started = new Date(date);
-  return Math.round(started.getTime() / 1000, 2);
+  return Math.round(started.getTime() / 1000);
 };
 
 const emitter = new DockerEvents({
   docker
 });
 
-const getStartTime = container =>
+const getStartTime = (container: Docker.ContainerInspectInfo): number =>
   dateToTimestamp(R.path(['State', 'StartedAt'], container));
 
 emitter.on('start', async info => {
@@ -46,7 +36,7 @@ emitter.on('start', async info => {
 
     // health checks only containers with specified HEALTH_CHECKER property
     // and nly first instance take care about stopping old containers
-    if (R.isNil(env[HEALTH_CHECKER]) || parseInt(containerInstance, 10) !== 1) return;
+    if (R.isNil(env[HEALTH_CHECKER]) || containerInstance !== 1) return;
 
     console.log(
       'Health check:',
@@ -55,7 +45,7 @@ emitter.on('start', async info => {
       startedTime
     );
 
-    const done = await checkers[env[HEALTH_CHECKER]]({
+    await checkers[env[HEALTH_CHECKER]]({
       ip: network.IPAddress,
       port: env[VIRTUAL_PORT],
       timeout: env[HEALTH_TIMEOUT],
@@ -75,7 +65,12 @@ emitter.on('start', async info => {
         await Promise.all(
           containers
             .map(container => {
-              console.log('container #', containerInstance, getStartTime(container), startedTime);
+              console.log(
+                'container #',
+                containerInstance,
+                getStartTime(container),
+                startedTime
+              );
               return container;
             })
             .filter(container => getStartTime(container) < startedTime)
@@ -85,8 +80,15 @@ emitter.on('start', async info => {
     )
       // dont stop scaled containers
       .filter(container => !container.Image.includes(containerPrefix));
-    console.log('container #', containerInstance, 'toStop', containersToStop.length);
-    containersToStop.map(container => console.log('container #', containerInstance, container.Names));
+    console.log(
+      'container #',
+      containerInstance,
+      'toStop',
+      containersToStop.length
+    );
+    containersToStop.map(container =>
+      console.log('container #', containerInstance, container.Names)
+    );
     await Promise.all(stopAndRemoveContainers(containersToStop));
 
     // Find sibling containers (started from docker-compose) to rename
