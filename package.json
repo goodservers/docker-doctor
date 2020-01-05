@@ -1,6 +1,6 @@
 {
   "name": "docker-doctor",
-  "version": "0.4.0-beta.3",
+  "version": "0.4.0",
   "description": "Health checker for your docker containers on server. Zero downtime.",
   "license": "MIT",
   "scripts": {
