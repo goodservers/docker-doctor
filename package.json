@@ -7,7 +7,7 @@
     "start": "NODE_ENV=production node dist/index.js",
     "build": "tsc --outDir dist src/index.ts",
     "dev": "ts-node --files ./src/index.ts",
-    "test": "jest",
+    "test": "NODE_ENV=test && jest",
     "pkg": "pkg . --targets node10-alpine-x64 --out-path pkg"
   },
   "main": "src/index.js",

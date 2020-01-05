@@ -1,7 +1,19 @@
 stages:
-  - test
-test:
-  stage: test
+  - unit-tests
+  - integration-test
+unit-tests:
+  stage: unit-tests
+  image: mhart/alpine-node:10.16.0
+  variables:
+    DOCKER_DRIVER: overlay2
+    CONTAINER_IMAGE: $CI_REGISTRY/$CI_PROJECT_PATH
+    DOCKER_HOST: tcp://docker:2375
+  before_script:
+    - yarn
+  script:
+    - yarn test
+integration-test:
+  stage: integration-test
   image: docker:latest
   services:
     - docker:dind
@@ -10,9 +22,9 @@ test:
     CONTAINER_IMAGE: $CI_REGISTRY/$CI_PROJECT_PATH
     DOCKER_HOST: tcp://docker:2375
   before_script:
-    - docker version
     - apk update
     - apk add --no-cache py-pip python-dev libffi-dev openssl-dev gcc libc-dev make
     - pip install docker-compose
+    - docker network create nginx-proxy
   script:
     - ./test.sh

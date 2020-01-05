@@ -5,7 +5,7 @@ import { Env, ParsedContainerName } from './types';
 
 var socketPath = process.env.DOCKER_SOCKET || '/var/run/docker.sock';
 
-if (!fs.statSync(socketPath).isSocket()) {
+if (process.env.NODE_ENV !== 'test' && !fs.statSync(socketPath).isSocket()) {
   throw new Error('Are you sure the docker is running?');
 }
 export const docker = new Docker({ socketPath });
@@ -23,13 +23,7 @@ export const findContainers = (
           Names: R.compose(
             R.not,
             R.isEmpty,
-            R.filter(
-              R.compose(
-                R.not,
-                R.isEmpty,
-                R.match(regexp)
-              )
-            )
+            R.filter(R.compose(R.not, R.isEmpty, R.match(regexp)))
           )
         })
       )(response) as Docker.ContainerInfo[];
@@ -127,9 +121,9 @@ export const parseContainerName = (name: string): ParsedContainerName => {
 export const parseEnvironment = (
   containers: Docker.ContainerInspectInfo
 ): Env =>
-  R.fromPairs(R.map(R.split('='))(
-    R.path(['Config', 'Env'], containers)
-  ) as any);
+  R.fromPairs(
+    R.map(R.split('='))(R.path(['Config', 'Env'], containers)) as any
+  );
 
 export const parseContainerNetwork = (
   containers: Docker.ContainerInspectInfo
