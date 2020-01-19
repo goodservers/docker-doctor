@@ -95,17 +95,26 @@ export const getContainerNeighbours = async (
     : new Promise(() => []);
 };
 
-export const stopAndRemoveContainers = (containers: Docker.ContainerInfo[]) =>
-  containers.map((container: Docker.ContainerInfo) => {
-    if (container.State === 'exited') {
-      return docker.getContainer(container.Id).remove();
-    } else {
-      return docker
-        .getContainer(container.Id)
-        .stop()
-        .then(container => container.remove());
-    }
-  });
+export const stopAndRemoveContainers = (
+  containers: Docker.ContainerInfo[]
+): Promise<Docker.ContainerInfo[]> =>
+  Promise.all(
+    containers.map((container: Docker.ContainerInfo) => {
+      if (container.State === 'exited') {
+        return docker.getContainer(container.Id).remove();
+      } else {
+        return new Promise(async (resolve, reject) => {
+          try {
+            const currentContainer = docker.getContainer(container.Id);
+            await currentContainer.stop();
+            resolve(currentContainer);
+          } catch (error) {
+            reject(error);
+          }
+        }).then((container: Docker.Container) => container.remove());
+      }
+    })
+  );
 
 export const parseContainerName = (name: string): ParsedContainerName => {
   const parsedName = name.match(/(.*[0-9]+)_(.*)_([0-9]+)/);
@@ -133,9 +142,11 @@ export const parseContainerNetwork = (
 };
 
 export const renameContainers = (containers: Docker.ContainerInfo[]) =>
-  containers.map(container => {
-    const parsedName = parseContainerName(getFirst(container.Names));
-    return docker
-      .getContainer(container.Id)
-      .rename({ name: `${parsedName.name}_${parsedName.scale}` });
-  });
+  Promise.all(
+    containers.map(container => {
+      const parsedName = parseContainerName(getFirst(container.Names));
+      return docker
+        .getContainer(container.Id)
+        .rename({ name: `${parsedName.name}_${parsedName.scale}` });
+    })
+  );

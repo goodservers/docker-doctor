@@ -2,7 +2,16 @@ import * as DockerEvents from 'docker-events';
 import * as Docker from 'dockerode';
 import * as R from 'ramda';
 import checkers from './checkers/';
-import { docker, findContainers, getContainerNeighbours, parseContainerName, parseContainerNetwork, parseEnvironment, renameContainers, stopAndRemoveContainers } from './docker';
+import {
+  docker,
+  findContainers,
+  getContainerNeighbours,
+  parseContainerName,
+  parseContainerNetwork,
+  parseEnvironment,
+  renameContainers,
+  stopAndRemoveContainers
+} from './docker';
 
 const HEALTH_MAX_RETRY = 'HEALTH_MAX_RETRY';
 const HEALTH_TIMEOUT = 'HEALTH_TIMEOUT';
@@ -89,7 +98,7 @@ emitter.on('start', async info => {
     containersToStop.map(container =>
       console.log('container #', containerInstance, container.Names)
     );
-    await Promise.all(stopAndRemoveContainers(containersToStop));
+    await stopAndRemoveContainers(containersToStop);
 
     // Find sibling containers (started from docker-compose) to rename
     const containersToRename = R.flatten(
@@ -100,7 +109,7 @@ emitter.on('start', async info => {
       )
     );
 
-    await Promise.all(renameContainers(containersToRename));
+    await renameContainers(containersToRename);
   } catch (error) {
     console.log(error.message);
   }
